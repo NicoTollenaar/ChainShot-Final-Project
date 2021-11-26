@@ -2,8 +2,8 @@ const { ethers } = require("hardhat");
 
 async function main() {
   
-  let contractToDeploy = await ethers.getContractFactory("ChainAccount");
-  const chainAccountContract = await contractToDeploy.deploy();
+  const chainAccountFactory = await ethers.getContractFactory("ChainAccount");
+  const chainAccountContract = await chainAccountFactory.deploy();
   await chainAccountContract.deployed();
 
   const chainAccountDeployer = await chainAccountContract.signer;
@@ -23,8 +23,8 @@ async function main() {
   console.log ("arbiter: ", arbiterSigner.address);
   console.log(`Escrow amount: ${escrowAmount}`);
 
-  contractToDeploy = await ethers.getContractFactory("EscrowContract", bankSigner); 
-  const escrowContract = await contractToDeploy.deploy(chainAccountContractAddress);
+  const escrowFactory = await ethers.getContractFactory("EscrowContract", bankSigner); 
+  const escrowContract = await escrowFactory.deploy(chainAccountContractAddress);
   await escrowContract.deployed();
 
   const escrowDeployer = await escrowContract.signer;

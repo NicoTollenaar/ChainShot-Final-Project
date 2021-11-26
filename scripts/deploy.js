@@ -1,20 +1,37 @@
-
-// const hre = require("hardhat");
-
 const { ethers } = require("hardhat");
 
 async function main() {
   
-  const constractAddress = "0xEeddf2a05e546DdFe33FE3b86e6D4817f89c3Adb";
-  const contractToDeploy = await ethers.getContractFactory("ABNAMROchainCheque", constractAddress);
-  const chequeContract = await contractToDeploy.deploy();
-  await chequeContract.deployed();
+  let contractToDeploy = await ethers.getContractFactory("ChainAccount");
+  const chainAccountContract = await contractToDeploy.deploy();
+  await chainAccountContract.deployed();
 
-  const deployer = await chequeContract.signer;
+  const chainAccountDeployer = await chainAccountContract.signer;
+  const chainAccountContractAddress = chainAccountContract.address;
 
-  console.log("chequeContract deployed to address:", chequeContract.address);
-  console.log("This is the address of the deployer: ", deployer.address);
-  console.log("These are the keys of the chequeContract object: ", Object.keys(chequeContract));
+  console.log("chainAccountContract deployed to address:", chainAccountContractAddress);
+  console.log("This is the address of the deployer: ", chainAccountDeployer.address);
+
+  const bankSigner = await ethers.getSigner(0); // bank is deployer
+  const depositorSigner = await ethers.getSigner(1);
+  const beneficiarySigner = await ethers.getSigner(2); 
+  const arbiterSigner = await ethers.getSigner(3);
+  const escrowAmount = 1000;
+  console.log ("bank: ", bankSigner.address);
+  console.log ("depositor: ", depositorSigner.address);
+  console.log ("beneficiary: ", beneficiarySigner.address);
+  console.log ("arbiter: ", arbiterSigner.address);
+  console.log(`Escrow amount: ${escrowAmount}`);
+
+  contractToDeploy = await ethers.getContractFactory("EscrowContract", bankSigner); 
+  const escrowContract = await contractToDeploy.deploy(chainAccountContractAddress);
+  await escrowContract.deployed();
+
+  const escrowDeployer = await escrowContract.signer;
+
+  console.log("escrowContract deployed to address:", escrowContract.address);
+  console.log("Escrow deployer: ", escrowDeployer.address);
+
 }
 
 main()

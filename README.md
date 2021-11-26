@@ -9,11 +9,13 @@ Notes:
 3. issuer – the bank of the accountholder, issuer of the cheque
 4. thirdParty – a party other than one of the above
 5. Agent - may be needed for legal reasons for the escrow contract
-6. Name of contract: ABNAMROchainChequeDollars (BANKOFAMERICAchainChequeEuros)
-7. Symbol: $-CHQ-ABN (currency - cheque - issuing bank), EUR-CHQ-BOA
+6. Name of contract: chainAccountDollars
+7. Symbol: $-ON-CHAIN-BANK-X
+
+Both the chainAccount and the escrow contracts are deployed by the bank. De default signer will be the bank.
 
 
-# Main steps
+# Main steps chainAccount
 
 1. accountHolder requests the issuer to issue a cheque through an off-chain request
 2. the issuer mints a cheque (to itself) and then transfers the newly minted cheque to the accountholder  
@@ -22,6 +24,10 @@ Notes:
 6.	Upon redemption the bank transfers the indicated funds to an account designated by the recipient or issues one or more new cheques to the recipient 
 7. Instead of redeeming the cheque, the recipient can also transfer (portions of) the cheque balance to one or more third parties. These third parties can then either redeem the cheque or transfer it on in the same way. The cheque balance has essentially become a form of cash
 8.	The issuer can burn cheque balances that it holds itself
+
+#
+
+
 
 # Remarks / questions
 

@@ -7,21 +7,18 @@ async function main() {
     const accounts = await ethers.provider.listAccounts();
     console.log(accounts);
     const [ bankSigner, depositorSigner, beneficiarySigner ] = await ethers.getSigners();
-    console.log(`Bank: ${bankSigner.address}\nDepositor: ${depositorSigner.address}
-    \nBeneficiary: ${beneficiarySigner.address}`);
+    console.log(`Bank: ${bankSigner.address}\nDepositor: ${depositorSigner.address}\nBeneficiary: ${beneficiarySigner.address}`);
     console.log("Transactions being mined, please wait ...");
     const chainAccountContract = await ethers.getContractAt("ChainAccount", chainAccountContractAddress);
-    console.log("Logging keys chainAccountContract: ", Object.keys(chainAccountContract));
-    const name = await chainAccountContract.name();
-    console.log("Logging tx: ", name);
+    const name = await chainAccountContract.connect(bankSigner).name();
     const symbol = await chainAccountContract.symbol();
     const decimals = await chainAccountContract.decimals();
-    console.log("Name, symbols, decimals: ", name, symbol, decimals);
-
+    console.log("Logging name, symbol, decimals: ", name, symbol, decimals);
   
     const txMoveOnChain = await chainAccountContract.connect(bankSigner).moveFundsOnChain(depositorSigner.address, 10000);
     await txMoveOnChain.wait();
-    console.log("Logging txMoveOnChain: ", txMoveOnChain);
+
+    // console.log("Logging txMoveOnChain: ", txMoveOnChain);
     
     // const txTransfer = await chainAccountContract.connect(depositorSigner).transferFunds(beneficiarySigner.address, 10000);
     // await txTransfer.wait();

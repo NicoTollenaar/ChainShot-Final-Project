@@ -17,6 +17,8 @@ contract ChainAccount is ERC20Burnable {
 
     // The amount to be issued must be entered in cents, decimals(2).
 
+    receive() external payable {}
+
     function decimals() public pure override returns (uint8) {
         return 2;
     }
@@ -26,8 +28,9 @@ contract ChainAccount is ERC20Burnable {
         _mint(msg.sender, amount);
         transfer(accountholder, amount);
     }
-
-    function transferFunds(address recipient, uint amount) public {
+    
+    function transferFunds(address recipient, uint256 amount) public payable {
+        console.log("Logging in chainAccountContr msg.sender and balance: ", msg.sender, balanceOf(msg.sender));
         require(balanceOf(msg.sender) >= amount, "Insufficient on-chain balance");
         transfer(recipient, amount);
     }

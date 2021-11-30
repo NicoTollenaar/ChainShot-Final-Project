@@ -10,7 +10,6 @@ async function main() {
   const depositorSigner = await ethers.getSigner(1);
   const beneficiarySigner = await ethers.getSigner(2); 
   const arbiterSigner = await ethers.getSigner(3);
-  const escrowAmount = 1000;
   console.log ("bankSigner: ", bankSigner.address);
   console.log ("depositorSigner: ", depositorSigner.address);
   console.log ("beneficiarySigner: ", beneficiarySigner.address);

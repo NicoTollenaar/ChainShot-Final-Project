@@ -48,7 +48,7 @@ contract EscrowContract {
 
     receive() external payable {}
 
-    event ProposedEscrow(address sender, uint escrowId);
+    event ProposedEscrow(address indexed proposer, uint indexed escrowId);
     function proposeEscrow(address _depositor, address _beneficiary, address _arbiter, uint _escrowAmount) public {
         uint escrowId = escrowArray.length;
         Escrow memory escrow = Escrow(msg.sender, _depositor, _beneficiary, _arbiter, _escrowAmount, 0, escrowId, EscrowStatus.Proposed);
@@ -75,14 +75,14 @@ contract EscrowContract {
         return false;           
     }
 
-    event ConsentToEscrow(address indexed sender, uint escrowId);
-    event AllConsented(string message, uint escrowId);
+    event ConsentToEscrow(address indexed sender, uint indexed escrowId);
+    event AllConsented(string indexed message, uint indexed escrowId);
     function consentToEscrow(uint escrowId) public {
         require(escrowArray[escrowId].status == EscrowStatus.Proposed, "Not elibible for consent");
         require(isParty(escrowId), "Only a party can consent to a proposed escrow");
         require(!consents[msg.sender][escrowId], "Consent already given");
         consents[msg.sender][escrowId] = true;
-        if (allConsented(escrowId)) {
+        if (allConsented(escrowId) == true) {
             emit AllConsented("All have consented", escrowId);
         }
         emit ConsentToEscrow(msg.sender, escrowId);
@@ -101,7 +101,6 @@ contract EscrowContract {
     }
 
     function allConsented(uint escrowId) public returns(bool) {
-        console.log("Logging in allConsentend parties[escrowId]: ", parties[escrowId].length);
         for (uint i = 0; i < parties[escrowId].length; i++) {
             if (consents[parties[escrowId][i]][escrowId] == false) { 
                 return false; 
@@ -120,7 +119,7 @@ contract EscrowContract {
         console.logBytes(payload);
         address chainAccountAddress = payable(address(chainAccount));
         console.log(chainAccountAddress);
-        (bool success, )= chainAccountAddress.delegatecall{ gas : 30000 }(payload);
+        (bool success, )= chainAccountAddress.delegatecall(payload);
         require(success, "simple transfer failed");
         return success;
     }

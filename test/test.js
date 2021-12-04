@@ -62,32 +62,27 @@ describe("Contracts", async function() {
         await tx.wait();
         balanceDepositorAfter = await chainAccountContract.balanceOf(depositorSigner.address);
         assert.equal((parseInt(balanceDepositorBefore, 10) + amount), parseInt(balanceDepositorAfter, 10));
-        console.log("Logging balance of depositor after moving on-chain: ", parseInt(balanceDepositorAfter, 10));
       });
     });
     
-    describe("chainAccountContract.transferFunds", async function(){
+    describe("chainAccountContract.transfer", async function(){
       before(async function() {
         const tx1 = await chainAccountContract.moveFundsOnChain(depositorSigner.address, amount);
         await tx1.wait();
         balanceDepositorBefore = await chainAccountContract.balanceOf(depositorSigner.address);
         balanceBeneficiaryBefore = await chainAccountContract.balanceOf(beneficiarySigner.address);
-        console.log("Balance depositor before: ", parseInt(balanceDepositorBefore, 10));
-        console.log("Balance beneficiary before: ", parseInt(balanceBeneficiaryBefore, 10));
-        const tx2 = await chainAccountContract.connect(depositorSigner).transferFunds(beneficiarySigner.address, amount);
+        const tx2 = await chainAccountContract.connect(depositorSigner).transfer(beneficiarySigner.address, amount);
         await tx2.wait();
       });
 
       it("should transfer indicated amount out of depositor's account", async function() {
         balanceDepositorAfter = await chainAccountContract.balanceOf(depositorSigner.address);
         assert.equal(parseInt(balanceDepositorBefore, 10) - amount, parseInt(balanceDepositorAfter, 10));
-        console.log("Logging balance of depositor after transfer: ", parseInt(balanceDepositorAfter, 10));
       });
 
       it("should transfer indicated amount into beneficiary's account", async function(){
         balanceBeneficiaryAfter = await chainAccountContract.balanceOf(beneficiarySigner.address);
         assert.equal(parseInt(balanceBeneficiaryBefore, 10) + amount, parseInt(balanceBeneficiaryAfter, 10));
-        console.log("Logging balance of beneficiary after transfer: ", parseInt(balanceBeneficiaryAfter, 10));
       });
     });
 
@@ -95,8 +90,6 @@ describe("Contracts", async function() {
       before(async function() {
         balanceBeneficiaryBefore = await chainAccountContract.balanceOf(beneficiarySigner.address);
         balanceBankBefore = await chainAccountContract.balanceOf(bankSigner.address);
-        console.log("Balance beneficiary before: ", parseInt(balanceBeneficiaryBefore, 10));
-        console.log("Balance bank before: ", parseInt(balanceBankBefore, 10));
         const tx = await chainAccountContract.connect(beneficiarySigner).moveFundsOffChain(amount);
         await tx.wait();
       });
@@ -104,20 +97,17 @@ describe("Contracts", async function() {
       it("should transfer indicated amount out of beneficiary's account", async function() {
         balanceBeneficiaryAfter = await chainAccountContract.balanceOf(beneficiarySigner.address);
         assert.equal(parseInt(balanceBeneficiaryBefore, 10) - amount, parseInt(balanceBeneficiaryAfter, 10));
-        console.log("Logging balance of depositor after transfer: ", parseInt(balanceBeneficiaryAfter, 10));
       });
 
       it("should transfer indicated amount to bank", async function(){
         balanceBankAfter = await chainAccountContract.balanceOf(bankSigner.address);
         assert.equal(parseInt(balanceBankBefore, 10) + amount, parseInt(balanceBankAfter, 10));
-        console.log("Logging balance of bank after transfer: ", parseInt(balanceBankAfter, 10));
       });
     })
     
     describe("chainAccountContract.deleteInternalBalanceBank", async function(){
       before(async function() {
         balanceBankBefore = await chainAccountContract.balanceOf(bankSigner.address);
-        console.log("Balance bank before: ", parseInt(balanceBankBefore, 10));
         const tx = await chainAccountContract.connect(bankSigner).deleteInternalBalanceBank(balanceBankBefore);
         await tx.wait();
       });
@@ -125,58 +115,8 @@ describe("Contracts", async function() {
       it("should delete internal balance bank", async function(){
         balanceBankAfter = await chainAccountContract.balanceOf(bankSigner.address);
         assert.ok(parseInt(balanceBankAfter, 10) === 0);
-        console.log("Logging balance of bank after transfer: ", parseInt(balanceBankAfter, 10));
       });
     });
-
-    describe("chainAccountContract.transferFromContract", async function(){
-      before(async function(){
-        const tx = await chainAccountContract.moveFundsOnChain(escrowContract.address, amount);
-        await tx.wait();
-        balanceContractBefore = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Balance escrow before: ", parseInt(balanceContractBefore, 10));
-        const tx2 = await chainAccountContract.connect(arbiterSigner).transferFromContract(arbiterSigner.address, escrowContract.address, bankSigner.address, amount);
-        await tx2.wait();
-        balanceEscrowContractAfter = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Balance escrow after: ", parseInt(balanceEscrowContractAfter, 10));
-      }); 
-
-      it("should transfer funds held by a contract", function(){
-        assert.equal(parseInt(balanceContractBefore, 10) - amount, parseInt(balanceEscrowContractAfter, 10));
-      });
-    });
-
-    describe("chainAccountContract.approve", async function(){
-      before(async function(){
-        const txMv = await chainAccountContract.moveFundsOnChain(depositorSigner.address, amount);
-        await txMv.wait();
-        const txApprove = await chainAccountContract.connect(depositorSigner).approve(arbiterSigner.address, amount);
-        await txApprove.wait();
-        const allowance = await chainAccountContract.allowance(depositorSigner.address, arbiterSigner.address);
-        console.log("Logging allowance: ", parseInt(allowance, 10));
-        balanceContractBefore = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Logging balance escrowContract before: ", parseInt(balanceContractBefore, 10));
-        const txTransfer = await chainAccountContract.connect(arbiterSigner)
-        .transferUsingAllowance(depositorSigner.address, escrowContract.address, amount);
-        await txTransfer.wait();
-      });
-
-      afterEach(async function(){
-        const tx = await chainAccountContract.connect(depositorSigner).approve(arbiterSigner.address, 0);
-        await tx.wait();
-        const allowanceAfter = await chainAccountContract.allowance(depositorSigner.address, arbiterSigner.address);
-        console.log("Logging allowance after: ", parseInt(allowanceAfter, 10));
-        const tx2 = await chainAccountContract.connect(arbiterSigner).transferFromContract(arbiterSigner.address, escrowContract.address, bankSigner.address, amount);
-        await tx2.wait();
-      });
-
-      it("should allow spender to transfer funds owner", async function(){
-        const balanceEscrowContractAfter = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Logging balance escrowContract after: ", parseInt(balanceEscrowContractAfter, 10));
-        assert.equal(parseInt(balanceContractBefore, 10) + amount, parseInt(balanceEscrowContractAfter, 10));
-      });
-    });
-
   });
 
   describe("escrowContract", async function(){
@@ -198,9 +138,7 @@ describe("Contracts", async function() {
           escrowProposal = parseRawProposal(rawProposal);
           proposals.push(escrowProposal);
           amountsFromEscrows.push(escrowProposal.amount);
-          console.log("Logging escrowProposal: ", escrowProposal);
         }
-        console.log("Logging amounts from escrowproposals: ", amountsFromEscrows);
       });
 
       it("should propose three escrows", async function(){
@@ -212,14 +150,7 @@ describe("Contracts", async function() {
         const topic = escrowContract.interface.getEventTopic('ProposedEscrow');
         const log = receipt.logs.find(x => x.topics.indexOf(topic) >= 0);
         const deployedEvent = escrowContract.interface.parseLog(log);
-        // console.log("Logging topic: ", topic);
         assert(deployedEvent, "Expected the Fallback Called event to be emitted!");
-        // console.log("logging escrowContract.interface: ", escrowContract.interface);
-        // console.log("logging escrowContract.event: ", event);
-        // console.log("logging escrowContract.eventTopic: ", topic);
-        // console.log("logging escrowContract log: ", log);
-        console.log("Logging deployedEvent: ", deployedEvent);
-        //how can you extract the topics from deployedEvent? 
       });
     });
 
@@ -233,7 +164,6 @@ describe("Contracts", async function() {
           receipt = await txConsentBen.wait();
           consentedParties = await escrowContract.getConsents(i);
           if (consentedParties[1] === beneficiarySigner.address) { counter++; }
-          console.log("Logging received consents (array) for each escrow: ", consentedParties);
         }
         assert.equal(counter, proposals.length);
       });
@@ -251,8 +181,6 @@ describe("Contracts", async function() {
       before(async function(){
         const txConsentArb = await escrowContract.connect(arbiterSigner).consentToEscrow(0);
         receipt = await txConsentArb.wait();
-        const consentedParties = await escrowContract.getConsents(0);
-        console.log("Logging consented parties: ", consentedParties);
       });
 
       it("should emit an AllConsented event", async function(){
@@ -266,7 +194,6 @@ describe("Contracts", async function() {
       it("should change the status of the proposal to 'Approved'", async function(){
         const rawProposal = await escrowContract.getEscrowProposal(0);
         const escrowProposal = parseRawProposal(rawProposal);
-        console.log("Logging approved proposal: ", escrowProposal);
         assert(escrowProposal.status === "Approved");
       });
     });
@@ -278,12 +205,9 @@ describe("Contracts", async function() {
         const txApprove = await chainAccountContract.connect(depositorSigner).approve(escrowContract.address, escrowAmounts[0]);
         await txApprove.wait();
         balanceDepositorBefore = await chainAccountContract.balanceOf(depositorSigner.address);
-        console.log("Logging depositor balance before: ", parseInt(balanceDepositorBefore, 10));
         balanceContractBefore = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Logging contractBalance before: ", parseInt(balanceContractBefore, 10));
         const rawProposalBefore = await escrowContract.getEscrowProposal(0);
         escrowProposalBefore = parseRawProposal(rawProposalBefore);
-        console.log("Logging escrow proposal before deposit: ", escrowProposalBefore);
       });
 
       it("should transfer the deposit out of the depositor's account", async function (){
@@ -291,8 +215,6 @@ describe("Contracts", async function() {
         await receipt.wait();
         balanceDepositorAfter = await chainAccountContract.balanceOf(depositorSigner.address);
         balanceContractAfter = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Logging depositor after: ", parseInt(balanceDepositorAfter, 10));
-        console.log("Logging contract after: ", parseInt(balanceContractAfter, 10));
         assert.equal(parseInt(balanceDepositorBefore) - (escrowAmounts[0] - 10), parseInt(balanceDepositorAfter, 10));
       });
 
@@ -303,7 +225,6 @@ describe("Contracts", async function() {
       it("should add the deposited amount to the escrow struct", async function(){
         const rawProposalAfter = await escrowContract.getEscrowProposal(0);
         const escrowProposalAfter = parseRawProposal(rawProposalAfter);
-        console.log("Logging escrow proposal after deposit: ", escrowProposalAfter);
         assert.equal(escrowProposalBefore.heldInDeposit + (escrowAmounts[0] - 10), escrowProposalAfter.heldInDeposit);
       });
 
@@ -333,43 +254,30 @@ describe("Contracts", async function() {
       });
 
       it("should transfer any excess amount back to depositor", async function(){
-          const rawProposal = await escrowContract.getEscrowProposal(1);
-          const escrowProposal = parseRawProposal(rawProposal);
-          console.log("Logging approved proposal: ", escrowProposal);
+          // 
           tx0 = await chainAccountContract.moveFundsOnChain(depositorSigner.address, (escrowAmounts[1] + 5));
           await tx0.wait();
         	const tx1 = await chainAccountContract.connect(depositorSigner).approve(escrowContract.address, (escrowAmounts[1] + 5));
           await tx1.wait();
           balanceDepositorBefore = await chainAccountContract.balanceOf(depositorSigner.address);
-          console.log("Balance depositor before: ", parseInt(balanceDepositorBefore, 10));
           const tx2 = await escrowContract.depositInEscrow(depositorSigner.address, (escrowAmounts[1] + 5), 1);
           await tx2.wait();
           balanceDepositorAfter = await chainAccountContract.balanceOf(depositorSigner.address);
-          console.log("Balance depositor after: ", parseInt(balanceDepositorAfter, 10));
           assert.equal(parseInt(balanceDepositorBefore, 10) - escrowAmounts[1], parseInt(balanceDepositorAfter, 10)); 
       });
 
       it("should should revert if attempted deposit exceeds escrow amount by more than 5%", async function(){
         tx = await escrowContract.connect(arbiterSigner).consentToEscrow(2);
         await tx.wait();
-        const consentedParties = await escrowContract.getConsents(2);
-        console.log("Logging consented parties: ", consentedParties);
-        const rawProposal = await escrowContract.getEscrowProposal(2);
-        const escrowProposal = parseRawProposal(rawProposal);
-        console.log("Logging approved proposal: ", escrowProposal);
         tx0 = await chainAccountContract.moveFundsOnChain(depositorSigner.address, (2* escrowAmounts[2] - 5));
         await tx0.wait();
         const tx1 = await chainAccountContract.connect(depositorSigner).approve(escrowContract.address, 2*escrowAmounts[2]);
         await tx1.wait();
-        balanceDepositorBefore = await chainAccountContract.balanceOf(depositorSigner.address);
-        console.log("Balance depositor before: ", parseInt(balanceDepositorBefore, 10));
         await expect(escrowContract.depositInEscrow(depositorSigner.address, (2*escrowAmounts[2]), 2)).to.be.reverted;
-        balanceDepositorAfter = await chainAccountContract.balanceOf(depositorSigner.address);
-        console.log("Balance depositor after: ", parseInt(balanceDepositorAfter, 10));
       });
     });
 
-    describe("escrowContract.approve", async function (){
+    describe("escrowContract.executeEscrow", async function (){
       let approvedAmount = (escrowAmounts[0]/2);
       let remainder = escrowAmounts[0] - approvedAmount;
       it("should transfer approved amount from escrow to beneficiary", async function(){
@@ -377,14 +285,10 @@ describe("Contracts", async function() {
         balanceBeneficiaryBefore = await chainAccountContract.balanceOf(beneficiarySigner.address);
         balanceDepositorBefore = await chainAccountContract.balanceOf(depositorSigner.address);
         balanceContractBefore = await chainAccountContract.balanceOf(escrowContract.address);
-        console.log("Logging balance contract before: ", parseInt(balanceContractBefore, 10));
-        console.log("Logging balance beneficairy before: ", parseInt(balanceBeneficiaryBefore,10));
-        const tx = await escrowContract.connect(arbiterSigner).approve(0, approvedAmount);
+        const tx = await escrowContract.connect(arbiterSigner).executeEscrow(0, approvedAmount);
         await tx.wait();
         balanceContractAfter = await chainAccountContract.balanceOf(escrowContract.address);
         balanceBeneficiaryAfter = await chainAccountContract.balanceOf(beneficiarySigner.address);
-        console.log("Logging balance contract before: ", parseInt(balanceContractAfter, 10));
-        console.log("Logging balance beneficairy before: ", parseInt(balanceBeneficiaryAfter,10));
         assert.equal(parseInt(balanceBeneficiaryBefore, 10) + approvedAmount, parseInt(balanceBeneficiaryAfter, 10));
       });
 
@@ -409,10 +313,7 @@ describe("Contracts", async function() {
       });
 
       it("should emit an executed event", async function(){
-        rawProposal = await escrowContract.getEscrowProposal(1);
-        escrowProposal = parseRawProposal(rawProposal);
-        console.log(escrowProposal);
-        await expect(escrowContract.connect(arbiterSigner).approve(1, escrowAmounts[1]))
+        await expect(escrowContract.connect(arbiterSigner).executeEscrow(1, escrowAmounts[1]))
         .to.emit(escrowContract, "Executed").withArgs(1, escrowAmounts[1]);
       })
     });

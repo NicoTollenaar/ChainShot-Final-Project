@@ -41,12 +41,10 @@ contract EscrowContract {
 
     mapping (uint=>address[numberOfParties]) public parties;
 
-	constructor(address payable addressChainAccount) payable {
+	constructor(address addressChainAccount) {
         chainAccount = ChainAccount(addressChainAccount);
         owner = msg.sender;
 	}
-
-    receive() external payable {}
 
     event ProposedEscrow(address indexed proposer, uint indexed escrowId);
     function proposeEscrow(address _depositor, address _beneficiary, address _arbiter, uint _escrowAmount) public {
@@ -85,6 +83,7 @@ contract EscrowContract {
         if (allConsented(escrowId) == true) {
             escrowArray[escrowId].status = EscrowStatus.Approved;
             emit AllConsented("All have consented", escrowId);
+            // chainAccount.approve(escrowArray[escrowId].arbiter, escrowArray[escrowId].escrowAmount);
         }
         emit ConsentToEscrow(msg.sender, escrowId);
     }
@@ -110,30 +109,15 @@ contract EscrowContract {
         return true;
     }
 
-    function simpleTransfer(uint amount) public payable returns(bool) {
-        console.log("simpleTransfer called");
-        address recipient = payable(address(this));
-        console.log("Logging recipient (escrowContract): ", recipient);
-        bytes memory payload = abi.encodeWithSignature("transferFunds(address,uint256)",recipient,amount);
-        console.log("logging payload:");
-        console.logBytes(payload);
-        address chainAccountAddress = payable(address(chainAccount));
-        console.log("Logging chainAccountAddress: ", chainAccountAddress);
-        (bool success, )= chainAccountAddress.delegatecall(payload);
-        require(success, "simple transfer failed");
-        return success;
-    }
-
     event DepositedInEscrow(uint indexed escrowId, uint indexed amount);
     event FullyFunded(uint indexed escrowId, uint indexed escrowAmount);
     function depositInEscrow(address depositor, uint amount, uint escrowId) public {
-        console.log("Logging msg.sender in depositInEscrow: ", msg.sender);
         require(escrowArray[escrowId].arbiter != address(0) && escrowArray[escrowId].beneficiary != address(0), "no address for beneficiary or arbiter");
         require(escrowArray[escrowId].status == EscrowStatus.Approved && 
         escrowArray[escrowId].status != EscrowStatus.FullyFunded, "Escrow not approved or already fully funded");
         require((escrowArray[escrowId].escrowAmount * 105) > ((escrowArray[escrowId].heldInDeposit + amount)*100), "Deposit exceeds escrow amount by more than 5%");
-        bool success = chainAccount.transferUsingAllowance(depositor, address(this), amount);
-        require(success, "transferUsingAllowance failed");
+        bool success = chainAccount.transferFrom(depositor, address(this), amount);
+        require(success, "transferFrom failed");
         escrowArray[escrowId].heldInDeposit += amount;
         emit DepositedInEscrow(escrowId, amount);
         if (escrowArray[escrowId].heldInDeposit >= escrowArray[escrowId].escrowAmount) {
@@ -142,28 +126,25 @@ contract EscrowContract {
             uint balanceOfThisContract = chainAccount.balanceOf(address(this));
             uint excessAmount = escrowArray[escrowId].heldInDeposit - escrowArray[escrowId].escrowAmount;
             if (balanceOfThisContract > excessAmount) {
-                chainAccount.transferFunds(depositor, excessAmount);
+                chainAccount.transfer(depositor, excessAmount);
                 escrowArray[escrowId].heldInDeposit -= excessAmount;
             }
         }
     }
 
 	event Executed(uint indexed escrowId, uint indexed amountApproved);
-	function approve(uint escrowId, uint approvedAmount) external {
+	function executeEscrow(uint escrowId, uint approvedAmount) external {
         require(escrowArray[escrowId].arbiter != address(0) && escrowArray[escrowId].beneficiary != address(0) && escrowArray[escrowId].depositor != address(0), "address lacking");
         require(allConsented(escrowId));
-        console.log("Logging escrow in chainAccountContract.approve: ");
-        console.log("EscrowId: ", escrowId);
-        console.log("status proposal: ", uint(escrowArray[escrowId].status));
         require(escrowArray[escrowId].status == EscrowStatus.FullyFunded, "Escrow must be fully funded");
 		require(msg.sender == escrowArray[escrowId].arbiter, "Only arbiter can approve");
         require(approvedAmount <= escrowArray[escrowId].escrowAmount, "Approved amount greater than escrow amount");
         require(approvedAmount <= escrowArray[escrowId].heldInDeposit, "Insufficient funds deposited");
         uint remainder = escrowArray[escrowId].heldInDeposit - approvedAmount;
-		bool successTransferBeneficiary = chainAccount.transferFunds(escrowArray[escrowId].beneficiary, approvedAmount);
+		bool successTransferBeneficiary = chainAccount.transfer(escrowArray[escrowId].beneficiary, approvedAmount);
         require(successTransferBeneficiary, "Transfer to beneficiary failed");
         escrowArray[escrowId].heldInDeposit -= approvedAmount;
-        bool successTransferDepositor = chainAccount.transferFunds(escrowArray[escrowId].depositor, remainder);
+        bool successTransferDepositor = chainAccount.transfer(escrowArray[escrowId].depositor, remainder);
         require(successTransferDepositor, "Transfer to depositor failed");
         escrowArray[escrowId].heldInDeposit -= remainder;
         escrowArray[escrowId].status = EscrowStatus.Executed;
